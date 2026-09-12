@@ -1,0 +1,973 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6eadc" />
+  <meta name="description" content="3分・5分・8分をすぐ使える、ゆで卵・温泉卵にも対応した無料のキッチンタイマー。" />
+  <title>ゆるっとキッチンタイマー</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #f7efe5;
+      --paper: rgba(255, 253, 249, 0.92);
+      --paper-strong: #fffdf9;
+      --ink: #493f38;
+      --muted: #7f7167;
+      --line: #eadfd3;
+      --peach: #f5cfc1;
+      --peach-strong: #efb9a5;
+      --sage: #d5e4d2;
+      --sage-strong: #bdd4b8;
+      --blue: #d9e6ee;
+      --yellow: #f6e6b9;
+      --lavender: #e8dded;
+      --danger: #e59b8a;
+      --shadow: 0 14px 40px rgba(90, 72, 58, 0.10);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; background: var(--bg); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(245, 207, 193, .38), transparent 25%),
+        radial-gradient(circle at 90% 13%, rgba(213, 228, 210, .55), transparent 24%),
+        radial-gradient(circle at 85% 80%, rgba(217, 230, 238, .52), transparent 25%),
+        linear-gradient(145deg, #fbf5ed 0%, #f4e9dd 100%);
+      padding: max(18px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .23;
+      background-image: radial-gradient(rgba(108, 90, 76, .14) .7px, transparent .7px);
+      background-size: 18px 18px;
+      mask-image: linear-gradient(to bottom, #000, transparent 85%);
+    }
+
+    button, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .app {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: relative;
+      text-align: center;
+      padding: 18px 10px 14px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      font-size: 12px;
+      letter-spacing: .16em;
+      font-weight: 800;
+      color: #8f7766;
+      background: rgba(255,255,255,.58);
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 999px;
+      padding: 7px 12px;
+    }
+
+    h1 {
+      margin: 12px 0 6px;
+      font-size: clamp(27px, 7vw, 42px);
+      letter-spacing: -.035em;
+      line-height: 1.12;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .float-emoji {
+      position: absolute;
+      font-size: 26px;
+      filter: saturate(.8);
+      opacity: .7;
+      animation: float 4.5s ease-in-out infinite;
+      user-select: none;
+      pointer-events: none;
+    }
+    .float-emoji.e1 { left: 2%; top: 21px; transform: rotate(-12deg); }
+    .float-emoji.e2 { right: 3%; top: 38px; animation-delay: -1.5s; transform: rotate(9deg); }
+    @keyframes float { 50% { translate: 0 -6px; } }
+
+    .mode-tabs, .sub-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 6px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(255,255,255,.7);
+      margin: 12px 0;
+    }
+
+    .tab-btn, .sub-tab-btn {
+      border: 0;
+      border-radius: 13px;
+      color: var(--muted);
+      background: transparent;
+      padding: 12px 10px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .tab-btn.active, .sub-tab-btn.active {
+      color: var(--ink);
+      background: var(--paper-strong);
+      box-shadow: 0 5px 16px rgba(80, 65, 54, .08);
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; animation: popIn .22s ease-out; }
+    @keyframes popIn { from { opacity: 0; transform: translateY(5px); } }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid rgba(255,255,255,.82);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      padding: clamp(18px, 4.5vw, 28px);
+      margin: 12px 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 15px;
+    }
+    .section-title h2, .section-title h3 { margin: 0; font-size: 18px; }
+    .hint { color: var(--muted); font-size: 12px; }
+
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    .preset {
+      min-height: 92px;
+      border: 0;
+      border-radius: 20px;
+      cursor: pointer;
+      color: var(--ink);
+      padding: 12px 8px;
+      transition: transform .16s ease, box-shadow .16s ease, outline .16s ease;
+      outline: 3px solid transparent;
+    }
+    .preset:nth-child(1) { background: var(--peach); }
+    .preset:nth-child(2) { background: var(--sage); }
+    .preset:nth-child(3) { background: var(--blue); }
+    .preset:hover { transform: translateY(-2px); }
+    .preset.active { outline-color: rgba(92, 74, 62, .25); box-shadow: 0 8px 22px rgba(82,69,58,.10); }
+    .preset .emoji { display: block; font-size: 25px; margin-bottom: 3px; }
+    .preset strong { display: block; font-size: 22px; }
+    .preset small { color: var(--muted); font-weight: 700; font-size: 11px; }
+
+    .microcopy {
+      margin: 12px 0 4px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .timer-box {
+      text-align: center;
+      padding: 16px 0 8px;
+    }
+
+    .status-line {
+      min-height: 24px;
+      font-weight: 800;
+      color: #8b7463;
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+
+    .time {
+      margin: 3px 0 8px;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(60px, 17vw, 108px);
+      line-height: 1;
+      letter-spacing: -.055em;
+      font-weight: 850;
+    }
+
+    .time.overdue { color: #c77566; }
+    .overdue-label {
+      min-height: 23px;
+      color: #b5685c;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+    }
+
+    .adjustments {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 15px 0;
+    }
+
+    .soft-btn {
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: #fffaf4;
+      border-radius: 14px;
+      min-height: 46px;
+      padding: 9px 7px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .soft-btn:active, .preset:active, .primary:active { transform: scale(.98); }
+    .soft-btn:disabled { opacity: .43; cursor: not-allowed; }
+
+    .main-actions {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 9px;
+    }
+    .primary, .secondary {
+      border: 0;
+      min-height: 54px;
+      border-radius: 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .primary { background: var(--peach-strong); color: #4e3e35; box-shadow: 0 8px 20px rgba(199, 129, 104, .18); }
+    .secondary { background: #eee7df; color: var(--ink); }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 15px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    select {
+      max-width: 165px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #fffaf4;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .egg-kind {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin: 14px 0;
+    }
+    .egg-choice {
+      border: 2px solid transparent;
+      border-radius: 18px;
+      min-height: 112px;
+      background: #fff9f1;
+      cursor: pointer;
+      padding: 11px 7px;
+      color: var(--ink);
+    }
+    .egg-choice:nth-child(1) { background: #f8ddd2; }
+    .egg-choice:nth-child(2) { background: #f5e9bd; }
+    .egg-choice:nth-child(3) { background: #dce8d9; }
+    .egg-choice.active { border-color: rgba(88, 69, 56, .32); }
+    .egg-yolk {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 7px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 42% 40%, #ffd36e 0 40%, #f4b74f 42% 70%, #fff9e8 72%);
+      box-shadow: inset 0 0 0 2px rgba(120,88,49,.06);
+    }
+    .egg-choice:nth-child(1) .egg-yolk { background: radial-gradient(circle at 40% 38%, #ffcb54 0 57%, #f4a943 61% 70%, #fff9e8 72%); }
+    .egg-choice:nth-child(3) .egg-yolk { background: radial-gradient(circle at 45% 42%, #f5c95e 0 68%, #fff9e8 70%); }
+    .egg-choice strong { display: block; font-size: 14px; }
+    .egg-choice small { display: block; color: var(--muted); margin-top: 3px; font-weight: 700; }
+
+    .method-note {
+      border-radius: 16px;
+      padding: 13px 14px;
+      background: rgba(232, 221, 237, .58);
+      color: #665a68;
+      font-size: 13px;
+      line-height: 1.65;
+      margin: 11px 0;
+    }
+
+    .heat-stage {
+      text-align: center;
+      padding: 14px 10px 8px;
+    }
+    .heat-stage .steam {
+      font-size: 42px;
+      display: inline-block;
+      animation: steam 1.6s ease-in-out infinite;
+    }
+    @keyframes steam { 50% { transform: translateY(-5px) scale(1.04); filter: blur(.15px); } }
+    .elapsed {
+      margin: 4px 0 12px;
+      font-variant-numeric: tabular-nums;
+      font-size: 36px;
+      font-weight: 850;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .step {
+      counter-increment: step;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: rgba(255,255,255,.55);
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .step::before {
+      content: counter(step);
+      display: grid;
+      place-items: center;
+      flex: 0 0 24px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--yellow);
+      color: #6d5a42;
+      font-weight: 900;
+    }
+
+    .done-banner {
+      display: none;
+      text-align: center;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #f9d7c9, #f7e9bd);
+      padding: 16px;
+      margin: 12px 0;
+      font-weight: 900;
+      font-size: 18px;
+      animation: tada .35s ease-out;
+    }
+    .done-banner.show { display: block; }
+    @keyframes tada { 50% { transform: scale(1.025); } }
+
+    details {
+      margin-top: 12px;
+      border-top: 1px dashed var(--line);
+      padding-top: 13px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    summary { cursor: pointer; font-weight: 800; color: #75665d; }
+    details a { color: #796b83; }
+
+    footer {
+      padding: 18px 8px 4px;
+      text-align: center;
+      color: #998b80;
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .sr-only {
+      position: absolute !important;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
+
+    @media (max-width: 480px) {
+      .card { border-radius: 21px; }
+      .adjustments { grid-template-columns: repeat(2, 1fr); }
+      .main-actions { grid-template-columns: 1fr; }
+      .egg-kind { gap: 6px; }
+      .egg-choice { min-height: 108px; padding-inline: 5px; }
+      .float-emoji { font-size: 22px; opacity: .55; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <span class="float-emoji e1" aria-hidden="true">🥄</span>
+      <span class="float-emoji e2" aria-hidden="true">🥚</span>
+      <div class="eyebrow">🍳 KITCHEN TOOL</div>
+      <h1>ゆるっとキッチンタイマー</h1>
+      <p class="subtitle">開いたらすぐ使える、ちょっと可愛い料理タイマー。</p>
+    </header>
+
+    <nav class="mode-tabs" aria-label="タイマーの種類">
+      <button class="tab-btn active" data-panel="quickPanel" type="button">🍜 かんたんタイマー</button>
+      <button class="tab-btn" data-panel="eggPanel" type="button">🥚 たまごタイマー</button>
+    </nav>
+
+    <section id="quickPanel" class="panel active">
+      <div class="card">
+        <div class="section-title">
+          <h2>よく使う時間</h2>
+          <span class="hint">ワンタップでセット</span>
+        </div>
+
+        <div class="presets" aria-label="時間プリセット">
+          <button class="preset" data-min="3" type="button"><span class="emoji">🍜</span><strong>3分</strong><small>カップ麺など</small></button>
+          <button class="preset" data-min="5" type="button"><span class="emoji">🍲</span><strong>5分</strong><small>うどん・太麺など</small></button>
+          <button class="preset active" data-min="8" type="button"><span class="emoji">🍝</span><strong>8分</strong><small>パスタなど</small></button>
+        </div>
+        <p class="microcopy">料理に合わせて ＋ / − で時間を調整してね ✨</p>
+
+        <div class="timer-box" aria-live="polite">
+          <div id="quickStatus" class="status-line">準備OK</div>
+          <div id="quickTime" class="time">08:00</div>
+          <div id="quickOverdue" class="overdue-label"></div>
+        </div>
+
+        <div class="adjustments">
+          <button class="soft-btn adjust" data-delta="-60" type="button">− 1分</button>
+          <button class="soft-btn adjust" data-delta="60" type="button">＋ 1分</button>
+          <button class="soft-btn adjust" data-delta="300" type="button">＋ 5分</button>
+          <button class="soft-btn adjust" data-delta="600" type="button">＋ 10分</button>
+        </div>
+
+        <div class="main-actions">
+          <button id="quickStart" class="primary" type="button">▶ スタート</button>
+          <button id="quickReset" class="secondary" type="button">↺ リセット</button>
+        </div>
+
+        <div id="quickDone" class="done-banner">できあがり〜！ 🍽️✨</div>
+
+        <div class="settings-row">
+          <span>🔔 終了音</span>
+          <label>
+            <span class="sr-only">終了音を選ぶ</span>
+            <select id="soundSelect">
+              <option value="bell">やさしいベル</option>
+              <option value="alarm">しっかりアラーム</option>
+              <option value="none">音なし</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section id="eggPanel" class="panel">
+      <div class="card">
+        <div class="section-title">
+          <h2>🥚 たまごタイマー</h2>
+          <span class="hint">好みで選ぶだけ</span>
+        </div>
+
+        <nav class="sub-tabs" aria-label="卵の種類">
+          <button class="sub-tab-btn active" data-egg-panel="boiledEgg" type="button">ゆで卵</button>
+          <button class="sub-tab-btn" data-egg-panel="onsenEgg" type="button">♨️ 温泉卵</button>
+        </nav>
+
+        <section id="boiledEgg" class="egg-subpanel">
+          <div class="sub-tabs" aria-label="ゆで方">
+            <button id="hotMethod" class="sub-tab-btn active" data-method="hot" type="button">♨️ お湯から</button>
+            <button id="coldMethod" class="sub-tab-btn" data-method="cold" type="button">💧 水から</button>
+          </div>
+
+          <div id="eggMethodNote" class="method-note">
+            冷蔵庫から出したMサイズ卵を、沸騰したお湯にそっと入れてスタート。終わったらすぐ冷水へ 🥶
+          </div>
+
+          <div id="eggChoices" class="egg-kind" aria-label="卵の仕上がり">
+            <button class="egg-choice" data-hot-seconds="360" data-cold-seconds="300" data-hot-label="とろとろ" data-cold-label="半熟" type="button">
+              <span class="egg-yolk" aria-hidden="true"></span><strong class="choice-label">とろとろ</strong><small class="choice-time">6分</small>
+            </button>
+            <button class="egg-choice active" data-hot-seconds="480" data-cold-seconds="480" data-hot-label="半熟" data-cold-label="しっかり" type="button">
+              <span class="egg-yolk" aria-hidden="true"></span><strong class="choice-label">半熟</strong><small class="choice-time">8分</small>
+            </button>
+            <button class="egg-choice" data-hot-seconds="660" data-cold-seconds="600" data-hot-label="しっかり" data-cold-label="固め" type="button">
+              <span class="egg-yolk" aria-hidden="true"></span><strong class="choice-label">しっかり</strong><small class="choice-time">11分</small>
+            </button>
+          </div>
+
+          <div id="coldHeating" class="heat-stage" hidden>
+            <div class="steam" aria-hidden="true">🔥</div>
+            <div id="heatLabel" class="status-line">卵と水を鍋に入れて、火をつけたらスタート</div>
+            <div id="heatElapsed" class="elapsed">00:00</div>
+            <button id="heatAction" class="primary" type="button" style="width:100%">🔥 火をつけた</button>
+          </div>
+
+          <div id="eggCountdown">
+            <div class="timer-box" aria-live="polite">
+              <div id="eggStatus" class="status-line">半熟の目安</div>
+              <div id="eggTime" class="time">08:00</div>
+              <div id="eggOverdue" class="overdue-label"></div>
+            </div>
+            <div class="main-actions">
+              <button id="eggStart" class="primary" type="button">▶ スタート</button>
+              <button id="eggReset" class="secondary" type="button">↺ リセット</button>
+            </div>
+          </div>
+
+          <div id="eggDone" class="done-banner">🥶 できあがり！すぐ冷水へ ✨</div>
+
+          <details>
+            <summary>時間の目安について</summary>
+            <p>お湯から：冷蔵庫から出したMサイズ卵を沸騰した湯からゆでる目安を採用しています。6分はとろとろ、8分は半熟、11分はしっかりめ。</p>
+            <p>水から：鍋・水量で沸騰までの時間が変わるため、「火をつける → 沸騰したらタップ」の2段階にしています。沸騰後は半熟5分、しっかり8分、固め10分の目安です。</p>
+            <p><a href="https://www.kewpie.co.jp/recipes/knowledge/article/1/page04/" target="_blank" rel="noopener">参考：キユーピー 卵のゆで時間</a><br><a href="https://park.ajinomoto.co.jp/contents/basic/vege_handling/egg/" target="_blank" rel="noopener">参考：味の素パーク ゆで卵のゆで方</a></p>
+          </details>
+        </section>
+
+        <section id="onsenEgg" class="egg-subpanel" hidden>
+          <div class="method-note">
+            ♨️ <strong>温泉卵（卵2個）の目安</strong><br>
+            1Lのお湯を沸騰させて火からおろし、水200mlを加えてから冷蔵庫の卵2個を入れます。
+          </div>
+
+          <div class="steps">
+            <div class="step">鍋で水1Lを沸騰させる。</div>
+            <div class="step">火からおろして、水200mlを加える。</div>
+            <div class="step">冷蔵庫から出した卵2個をそっと入れ、フタをする。</div>
+            <div class="step">下のタイマーをスタート。終了後は冷水へ。</div>
+          </div>
+
+          <div class="timer-box" aria-live="polite">
+            <div id="onsenStatus" class="status-line">温泉卵の目安</div>
+            <div id="onsenTime" class="time">13:00</div>
+            <div id="onsenOverdue" class="overdue-label"></div>
+          </div>
+          <div class="adjustments">
+            <button class="soft-btn onsen-adjust" data-delta="-60" type="button">− 1分</button>
+            <button class="soft-btn onsen-adjust" data-delta="60" type="button">＋ 1分</button>
+            <button class="soft-btn onsen-adjust" data-delta="300" type="button">＋ 5分</button>
+            <button class="soft-btn onsen-adjust" data-delta="600" type="button">＋ 10分</button>
+          </div>
+          <div class="main-actions">
+            <button id="onsenStart" class="primary" type="button">▶ スタート</button>
+            <button id="onsenReset" class="secondary" type="button">↺ リセット</button>
+          </div>
+          <div id="onsenDone" class="done-banner">♨️ 温泉卵できあがり！冷水へ 🥚✨</div>
+
+          <details>
+            <summary>温泉卵の作り方について</summary>
+            <p>このモードは「卵2個・熱湯1L・追加する水200ml」を前提に、12〜13分の目安から13分を初期値にしています。卵の数や湯量が変わると仕上がりも変わります。</p>
+            <p><a href="https://park.ajinomoto.co.jp/contents/basic/vege_handling/egg/" target="_blank" rel="noopener">参考：味の素パーク 温泉卵</a></p>
+          </details>
+        </section>
+      </div>
+    </section>
+
+    <footer>
+      外部API・広告・会員登録なし。タイマー処理はこの端末のブラウザ内で動きます。<br>
+      ※端末やブラウザの省電力設定により、画面を閉じている間の音が遅れる場合があります。
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (s, root = document) => root.querySelector(s);
+      const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+
+      const state = {
+        quick: makeTimerState(8 * 60),
+        egg: makeTimerState(8 * 60),
+        onsen: makeTimerState(13 * 60),
+        eggMethod: "hot",
+        heating: false,
+        heatingStartedAt: 0,
+        heatTick: null,
+        wakeLock: null,
+        audioCtx: null,
+        alarmed: new Set()
+      };
+
+      function makeTimerState(seconds) {
+        return { base: seconds, remaining: seconds, endAt: null, running: false, paused: false, tick: null };
+      }
+
+      function fmt(seconds) {
+        const s = Math.max(0, Math.round(seconds));
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+      }
+
+      function fmtElapsed(seconds) {
+        const s = Math.max(0, Math.floor(seconds));
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+      }
+
+      function setupAudio() {
+        if (!state.audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) state.audioCtx = new Ctx();
+        }
+        if (state.audioCtx?.state === "suspended") state.audioCtx.resume().catch(() => {});
+      }
+
+      function playTone(kind = "bell") {
+        if (kind === "none") return;
+        setupAudio();
+        const ctx = state.audioCtx;
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const seq = kind === "alarm"
+          ? [[880, 0], [880, .24], [1046, .48], [880, .72], [1046, .96]]
+          : [[659, 0], [784, .22], [1046, .44]];
+        seq.forEach(([freq, offset], i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = kind === "alarm" ? "square" : "sine";
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, now + offset);
+          gain.gain.exponentialRampToValueAtTime(kind === "alarm" ? .18 : .12, now + offset + .02);
+          gain.gain.exponentialRampToValueAtTime(.0001, now + offset + (kind === "alarm" ? .18 : .38));
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + (kind === "alarm" ? .2 : .42));
+        });
+        if (navigator.vibrate) navigator.vibrate(kind === "alarm" ? [180, 90, 180, 90, 240] : [140, 70, 180]);
+      }
+
+      async function requestWakeLock() {
+        if (!("wakeLock" in navigator) || state.wakeLock) return;
+        try { state.wakeLock = await navigator.wakeLock.request("screen"); }
+        catch (_) {}
+      }
+
+      async function releaseWakeLock() {
+        if (!state.wakeLock) return;
+        try { await state.wakeLock.release(); } catch (_) {}
+        state.wakeLock = null;
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          const anyRunning = state.quick.running || state.egg.running || state.onsen.running || state.heating;
+          if (anyRunning) requestWakeLock();
+          renderAll();
+        }
+      });
+
+      function getSound() {
+        return localStorage.getItem("yuruttoSound") || "bell";
+      }
+
+      function alarmOnce(key) {
+        if (state.alarmed.has(key)) return;
+        state.alarmed.add(key);
+        playTone(getSound());
+      }
+
+      function startTimer(name, ui) {
+        const t = state[name];
+        setupAudio();
+        state.alarmed.delete(name);
+        if (!t.running) {
+          t.endAt = Date.now() + t.remaining * 1000;
+          t.running = true;
+          t.paused = false;
+          requestWakeLock();
+          clearInterval(t.tick);
+          t.tick = setInterval(() => updateTimer(name, ui), 250);
+          saveRunningTimer(name);
+        } else {
+          const remMs = t.endAt - Date.now();
+          t.remaining = Math.max(0, Math.ceil(remMs / 1000));
+          t.running = false;
+          t.paused = true;
+          clearInterval(t.tick);
+          t.tick = null;
+          clearSavedTimer(name);
+          maybeReleaseWakeLock();
+        }
+        updateTimer(name, ui);
+      }
+
+      function resetTimer(name, ui, baseOverride = null) {
+        const t = state[name];
+        clearInterval(t.tick);
+        t.tick = null;
+        t.running = false;
+        t.paused = false;
+        if (baseOverride !== null) t.base = baseOverride;
+        t.remaining = t.base;
+        t.endAt = null;
+        state.alarmed.delete(name);
+        clearSavedTimer(name);
+        ui.done.classList.remove("show");
+        maybeReleaseWakeLock();
+        updateTimer(name, ui);
+      }
+
+      function adjustTimer(name, delta, ui) {
+        const t = state[name];
+        if (t.running) return;
+        t.base = Math.min(99 * 60 + 59, Math.max(10, t.base + delta));
+        t.remaining = t.base;
+        t.paused = false;
+        state.alarmed.delete(name);
+        ui.done.classList.remove("show");
+        updateTimer(name, ui);
+      }
+
+      function updateTimer(name, ui) {
+        const t = state[name];
+        let overdue = 0;
+        if (t.running && t.endAt) {
+          const diff = t.endAt - Date.now();
+          if (diff > 0) {
+            t.remaining = Math.ceil(diff / 1000);
+          } else {
+            t.remaining = 0;
+            overdue = Math.floor(Math.abs(diff) / 1000);
+            alarmOnce(name);
+            ui.done.classList.add("show");
+          }
+        }
+        ui.time.textContent = fmt(t.remaining);
+        ui.time.classList.toggle("overdue", overdue > 0);
+        ui.overdue.textContent = overdue > 0 ? `終了から +${fmtElapsed(overdue)}` : "";
+        ui.start.textContent = t.running ? "⏸ 一時停止" : (t.paused ? "▶ 再開" : "▶ スタート");
+        if (ui.status) {
+          if (overdue > 0) ui.status.textContent = "できあがり！";
+          else if (t.running) ui.status.textContent = "タイマー作動中…";
+          else if (t.paused) ui.status.textContent = "一時停止中";
+          else ui.status.textContent = ui.idleText?.() || "準備OK";
+        }
+        if (t.running) saveRunningTimer(name);
+      }
+
+      function maybeReleaseWakeLock() {
+        if (!state.quick.running && !state.egg.running && !state.onsen.running && !state.heating) releaseWakeLock();
+      }
+
+      const quickUI = {
+        time: $("#quickTime"), overdue: $("#quickOverdue"), start: $("#quickStart"), done: $("#quickDone"), status: $("#quickStatus"), idleText: () => "準備OK"
+      };
+      const eggUI = {
+        time: $("#eggTime"), overdue: $("#eggOverdue"), start: $("#eggStart"), done: $("#eggDone"), status: $("#eggStatus"),
+        idleText: () => `${getSelectedEggLabel()}の目安`
+      };
+      const onsenUI = {
+        time: $("#onsenTime"), overdue: $("#onsenOverdue"), start: $("#onsenStart"), done: $("#onsenDone"), status: $("#onsenStatus"), idleText: () => "温泉卵の目安"
+      };
+
+      $$(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
+        $$(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+        $$(".panel").forEach(p => p.classList.toggle("active", p.id === btn.dataset.panel));
+      }));
+
+      $$(".preset").forEach(btn => btn.addEventListener("click", () => {
+        if (state.quick.running) return;
+        $$(".preset").forEach(b => b.classList.toggle("active", b === btn));
+        const seconds = Number(btn.dataset.min) * 60;
+        state.quick.base = seconds;
+        state.quick.remaining = seconds;
+        state.quick.paused = false;
+        quickUI.done.classList.remove("show");
+        updateTimer("quick", quickUI);
+      }));
+
+      $$(".adjust").forEach(btn => btn.addEventListener("click", () => adjustTimer("quick", Number(btn.dataset.delta), quickUI)));
+      $("#quickStart").addEventListener("click", () => startTimer("quick", quickUI));
+      $("#quickReset").addEventListener("click", () => resetTimer("quick", quickUI));
+
+      const soundSelect = $("#soundSelect");
+      soundSelect.value = getSound();
+      soundSelect.addEventListener("change", () => {
+        localStorage.setItem("yuruttoSound", soundSelect.value);
+        setupAudio();
+        playTone(soundSelect.value);
+      });
+
+      $$(".sub-tab-btn[data-egg-panel]").forEach(btn => btn.addEventListener("click", () => {
+        $$(".sub-tab-btn[data-egg-panel]").forEach(b => b.classList.toggle("active", b === btn));
+        $$(".egg-subpanel").forEach(p => p.hidden = p.id !== btn.dataset.eggPanel);
+      }));
+
+      $$(".sub-tab-btn[data-method]").forEach(btn => btn.addEventListener("click", () => {
+        if (state.egg.running || state.heating) return;
+        $$(".sub-tab-btn[data-method]").forEach(b => b.classList.toggle("active", b === btn));
+        state.eggMethod = btn.dataset.method;
+        updateEggMethodUI();
+      }));
+
+      function getSelectedEggChoice() { return $(".egg-choice.active"); }
+      function getSelectedEggSeconds() {
+        const c = getSelectedEggChoice();
+        return Number(state.eggMethod === "hot" ? c.dataset.hotSeconds : c.dataset.coldSeconds);
+      }
+      function getSelectedEggLabel() {
+        const c = getSelectedEggChoice();
+        return state.eggMethod === "hot" ? c.dataset.hotLabel : c.dataset.coldLabel;
+      }
+
+      function updateEggMethodUI() {
+        const cold = state.eggMethod === "cold";
+        $("#eggMethodNote").innerHTML = cold
+          ? "卵と水を鍋に入れて加熱。<strong>沸騰したら『♨️ 沸騰した！』をタップ</strong>すると、仕上がりタイマーが始まります。終わったらすぐ冷水へ 🥶"
+          : "冷蔵庫から出したMサイズ卵を、沸騰したお湯にそっと入れてスタート。終わったらすぐ冷水へ 🥶";
+
+        $$(".egg-choice").forEach(c => {
+          c.querySelector(".choice-label").textContent = cold ? c.dataset.coldLabel : c.dataset.hotLabel;
+          const sec = Number(cold ? c.dataset.coldSeconds : c.dataset.hotSeconds);
+          c.querySelector(".choice-time").textContent = `${sec / 60}分`;
+        });
+
+        $("#coldHeating").hidden = !cold;
+        $("#eggCountdown").hidden = cold;
+        stopHeating(true);
+        const sec = getSelectedEggSeconds();
+        resetTimer("egg", eggUI, sec);
+      }
+
+      $$(".egg-choice").forEach(btn => btn.addEventListener("click", () => {
+        if (state.egg.running || state.heating) return;
+        $$(".egg-choice").forEach(b => b.classList.toggle("active", b === btn));
+        resetTimer("egg", eggUI, getSelectedEggSeconds());
+      }));
+
+      $("#eggStart").addEventListener("click", () => startTimer("egg", eggUI));
+      $("#eggReset").addEventListener("click", () => resetTimer("egg", eggUI, getSelectedEggSeconds()));
+
+      function startHeating() {
+        setupAudio();
+        state.heating = true;
+        state.heatingStartedAt = Date.now();
+        requestWakeLock();
+        $("#heatAction").textContent = "♨️ 沸騰した！";
+        $("#heatLabel").textContent = "沸騰するまでの時間を計っています";
+        clearInterval(state.heatTick);
+        state.heatTick = setInterval(updateHeating, 500);
+        updateHeating();
+      }
+
+      function updateHeating() {
+        if (!state.heating) return;
+        const elapsed = Math.floor((Date.now() - state.heatingStartedAt) / 1000);
+        $("#heatElapsed").textContent = fmtElapsed(elapsed);
+      }
+
+      function boilingReached() {
+        if (!state.heating) return;
+        clearInterval(state.heatTick);
+        state.heatTick = null;
+        state.heating = false;
+        $("#coldHeating").hidden = true;
+        $("#eggCountdown").hidden = false;
+        state.egg.base = getSelectedEggSeconds();
+        state.egg.remaining = state.egg.base;
+        state.egg.paused = false;
+        startTimer("egg", eggUI);
+      }
+
+      function stopHeating(resetUI = false) {
+        clearInterval(state.heatTick);
+        state.heatTick = null;
+        state.heating = false;
+        state.heatingStartedAt = 0;
+        if (resetUI) {
+          $("#heatElapsed").textContent = "00:00";
+          $("#heatAction").textContent = "🔥 火をつけた";
+          $("#heatLabel").textContent = "卵と水を鍋に入れて、火をつけたらスタート";
+        }
+        maybeReleaseWakeLock();
+      }
+
+      $("#heatAction").addEventListener("click", () => state.heating ? boilingReached() : startHeating());
+
+      $$(".onsen-adjust").forEach(btn => btn.addEventListener("click", () => adjustTimer("onsen", Number(btn.dataset.delta), onsenUI)));
+      $("#onsenStart").addEventListener("click", () => startTimer("onsen", onsenUI));
+      $("#onsenReset").addEventListener("click", () => resetTimer("onsen", onsenUI));
+
+      function saveRunningTimer(name) {
+        const t = state[name];
+        if (!t.running || !t.endAt) return;
+        localStorage.setItem(`yurutto_${name}`, JSON.stringify({ endAt: t.endAt, base: t.base }));
+      }
+      function clearSavedTimer(name) { localStorage.removeItem(`yurutto_${name}`); }
+
+      function restoreTimer(name, ui) {
+        const raw = localStorage.getItem(`yurutto_${name}`);
+        if (!raw) return;
+        try {
+          const saved = JSON.parse(raw);
+          if (!saved?.endAt || !saved?.base) return clearSavedTimer(name);
+          const t = state[name];
+          t.base = saved.base;
+          t.endAt = saved.endAt;
+          t.running = true;
+          t.paused = false;
+          const diff = saved.endAt - Date.now();
+          t.remaining = Math.max(0, Math.ceil(diff / 1000));
+          clearInterval(t.tick);
+          t.tick = setInterval(() => updateTimer(name, ui), 250);
+          requestWakeLock();
+          updateTimer(name, ui);
+        } catch (_) { clearSavedTimer(name); }
+      }
+
+      function renderAll() {
+        updateTimer("quick", quickUI);
+        updateTimer("egg", eggUI);
+        updateTimer("onsen", onsenUI);
+        updateHeating();
+      }
+
+      updateEggMethodUI();
+      updateTimer("quick", quickUI);
+      updateTimer("onsen", onsenUI);
+      restoreTimer("quick", quickUI);
+      restoreTimer("egg", eggUI);
+      restoreTimer("onsen", onsenUI);
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+      }
+    })();
+  </script>
+</body>
+</html>
